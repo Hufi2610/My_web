@@ -53,7 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       searchTimer = setTimeout(() => {
         filterTable(e.target.value);
-      }, 250);
+      }, 150);
     });
   }
 });
