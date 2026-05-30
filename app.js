@@ -11,6 +11,35 @@ function setLoading(isLoading) {
     ? "⏳ Đang tải dữ liệu..."
     : "Tìm mã / barcode / mô tả...";
 }
+const input = document.getElementById("searchInput");
+const clearBtn = document.getElementById("clearBtn");
+
+if (input) {
+  input.addEventListener("input", (e) => {
+    clearTimeout(searchTimer);
+
+    searchTimer = setTimeout(() => {
+      filterTable(e.target.value);
+    }, 250);
+
+    // 👇 hiện/ẩn nút x
+    if (clearBtn) {
+      clearBtn.style.display = e.target.value ? "block" : "none";
+    }
+  });
+}
+
+function clearInput() {
+  const input = document.getElementById("searchInput");
+
+  input.value = "";
+  filterTable("");
+
+  const clearBtn = document.getElementById("clearBtn");
+  if (clearBtn) clearBtn.style.display = "none";
+
+  input.focus();
+}
 
 /* ================= INIT ================= */
 document.addEventListener("DOMContentLoaded", () => {
