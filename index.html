@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Search Article CS</title>
+
+  <link rel="stylesheet" href="style.css">
+
+  <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h1>
+    <div class="logo">🔍</div>
+    Search Article CS
+    <span class="badge">JSON Mode</span>
+  </h1>
+
+  <div class="card">
+
+    <div class="search-wrap">
+      <input id="searchInput" placeholder="Tìm mã / barcode / mô tả..." />
+      <button class="scan-btn" onclick="openScanner()">📷</button>
+    </div>
+
+
+    <div class="table-container">
+      <table id="excelTable"></table>
+    </div>
+
+  </div>
+</div>
+
+<div class="fab" onclick="toggleMenu(event)">⚙️</div>
+<div class="overlay" id="overlay" onclick="closeMenu()"></div>
+
+<div class="menu" id="menu">
+  <a href="https://hufi2610.github.io/My_web_3/" target="_blank"> 🔳 QR / Barcode Tool</a>
+  <a href="https://quiet-bonus-9e7a.locphien-to.workers.dev/" target="_blank">📘 Hướng dẫn RF</a>
+  <a href="https://ebill.mmvietnam.com/article_check.html" target="_blank">❌ Không thể check code</a>
+</div>
+
+<div class="scanner-modal" id="scannerModal">
+  <div class="scanner-box">
+    <div class="scanner-header">
+      <span>📷 Scan</span>
+      <button onclick="closeScanner()">Đóng</button>
+    </div>
+    <div id="reader"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+
+</body>
+</html>
