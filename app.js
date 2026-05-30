@@ -2,6 +2,16 @@ let originalData = [];
 let searchIndex = [];
 let searchTimer = null;
 
+/* ================= LOADING UI ================= */
+function setLoading(isLoading) {
+  const input = document.getElementById("searchInput");
+  if (!input) return;
+
+  input.placeholder = isLoading
+    ? "⏳ Đang tải dữ liệu..."
+    : "Tìm mã / barcode / mô tả...";
+}
+
 /* ================= INIT ================= */
 document.addEventListener("DOMContentLoaded", () => {
   loadData();
@@ -19,42 +29,45 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-/* ================= LOAD MULTI JSON ================= */
+/* ================= LOAD MULTI JSON (FAST PARALLEL) ================= */
 async function loadData() {
   try {
+    setLoading(true);
+
     const files = [];
 
     for (let i = 1; i <= 10; i++) {
       files.push(i === 1 ? "./data.json" : `./data_${i}.json`);
     }
 
-    originalData = [];
+    const responses = await Promise.all(
+      files.map((f) =>
+        fetch(f).catch(() => null)
+      )
+    );
 
-    for (let file of files) {
-      try {
-        const res = await fetch(file);
-        if (!res.ok) continue;
+    const jsons = await Promise.all(
+      responses.map((r) =>
+        r ? r.json().catch(() => []) : []
+      )
+    );
 
-        const data = await res.json();
-
-        if (Array.isArray(data)) {
-          originalData = originalData.concat(data);
-        }
-      } catch (e) {}
-    }
+    originalData = jsons.flat();
 
     buildIndex(originalData);
-    renderTable([]);
+
+    setLoading(false);
 
   } catch (err) {
     console.error("Load JSON error:", err);
     alert("Lỗi load data JSON");
+    setLoading(false);
   }
 }
 
 /* ================= BUILD SEARCH INDEX ================= */
 function buildIndex(data) {
-  searchIndex = data.map(item => ({
+  searchIndex = data.map((item) => ({
     data: item,
     search: Object.values(item).join(" ").toLowerCase()
   }));
@@ -72,9 +85,9 @@ function filterTable(keyword) {
   if (!searchIndex.length) return;
 
   const results = searchIndex
-    .filter(i => i.search.includes(k))
+    .filter((i) => i.search.includes(k))
     .slice(0, 200)
-    .map(i => i.data);
+    .map((i) => i.data);
 
   renderTable(results);
 }
@@ -91,12 +104,12 @@ function renderTable(rows) {
 
   const allCols = Object.keys(originalData[0]);
 
-  // ❗ FIX: bỏ cột cuối
+  // ❗ bỏ cột cuối cùng
   const cols = allCols.slice(0, -1);
 
   let html = "<thead><tr>";
 
-  cols.forEach(c => {
+  cols.forEach((c) => {
     html += `<th>${c}</th>`;
   });
 
