@@ -23,7 +23,10 @@
   <div class="card">
 
     <div class="search-wrap">
-      <input id="searchInput" placeholder="Tìm mã / barcode / mô tả..." />
+      <div class="input-box">
+            <input id="searchInput" placeholder="Tìm mã / barcode / mô tả..." />
+            <button id="clearBtn" onclick="clearInput()">✖</button>
+      </div>
       <button class="scan-btn" onclick="openScanner()">📷</button>
     </div>
 
