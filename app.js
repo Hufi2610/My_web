@@ -5,6 +5,7 @@ let searchTimer = null;
 /* ================= LOADING UI ================= */
 function setLoading(isLoading) {
   const input = document.getElementById("searchInput");
+
   if (!input) return;
 
   input.placeholder = isLoading
@@ -12,57 +13,47 @@ function setLoading(isLoading) {
     : "Tìm mã / barcode / mô tả...";
 }
 
-/* ================= CLEAR BUTTON ================= */
-const input = document.getElementById("searchInput");
-const clearBtn = document.getElementById("clearBtn");
-
-if (input) {
-  input.addEventListener("input", (e) => {
-    clearTimeout(searchTimer);
-
-    searchTimer = setTimeout(() => {
-      filterTable(e.target.value);
-    }, 250);
-
-    if (clearBtn) {
-      clearBtn.style.display = e.target.value ? "block" : "none";
-    }
-  });
-}
-
-function clearInput() {
-  const input = document.getElementById("searchInput");
-
-  if (!input) return;
-
-  input.value = "";
-  filterTable("");
-
-  const clearBtn = document.getElementById("clearBtn");
-
-  if (clearBtn) {
-    clearBtn.style.display = "none";
-  }
-
-  input.focus();
-}
-
 /* ================= INIT ================= */
 document.addEventListener("DOMContentLoaded", () => {
   loadData();
 
   const input = document.getElementById("searchInput");
+  const clearBtn = document.getElementById("clearBtn");
 
   if (input) {
     input.addEventListener("input", (e) => {
+      const value = e.target.value;
+
       clearTimeout(searchTimer);
 
       searchTimer = setTimeout(() => {
-        filterTable(e.target.value);
-      }, 150);
+        filterTable(value);
+      }, 250);
+
+      if (clearBtn) {
+        clearBtn.style.display = value ? "block" : "none";
+      }
     });
   }
 });
+
+/* ================= CLEAR INPUT ================= */
+function clearInput() {
+  const input = document.getElementById("searchInput");
+  const clearBtn = document.getElementById("clearBtn");
+
+  if (!input) return;
+
+  input.value = "";
+
+  if (clearBtn) {
+    clearBtn.style.display = "none";
+  }
+
+  renderTable([]);
+
+  input.focus();
+}
 
 /* ================= LOAD MULTI JSON ================= */
 async function loadData() {
@@ -72,7 +63,11 @@ async function loadData() {
     const files = [];
 
     for (let i = 1; i <= 10; i++) {
-      files.push(i === 1 ? "./data.json" : `./data_${i}.json`);
+      files.push(
+        i === 1
+          ? "./data.json"
+          : `./data_${i}.json`
+      );
     }
 
     const responses = await Promise.all(
@@ -101,19 +96,28 @@ async function loadData() {
       })
     );
 
-    originalData = jsons.flat();
+    originalData = [];
+
+    for (const arr of jsons) {
+      originalData.push(...arr);
+    }
 
     buildIndex(originalData);
 
     console.log(
-      `Loaded ${originalData.length} products | Indexed ${searchIndex.length} barcodes`
+      `Loaded ${originalData.length} products`
+    );
+
+    console.log(
+      `Indexed ${searchIndex.length} barcodes`
     );
 
     setLoading(false);
 
   } catch (err) {
-    console.error("Load JSON error:", err);
-    alert("Lỗi load data JSON");
+    console.error(err);
+    alert("Lỗi load dữ liệu");
+
     setLoading(false);
   }
 }
@@ -122,37 +126,43 @@ async function loadData() {
 function buildIndex(data) {
   searchIndex = [];
 
-  data.forEach((item) => {
+  for (const item of data) {
 
     const barcodes = Array.isArray(item.BARCODE)
       ? item.BARCODE
       : item.BARCODE
       ? [item.BARCODE]
-      : [""];
+      : [];
 
-    barcodes.forEach((barcode) => {
+    const artcexr = String(item.ARTCEXR || "");
+    const desc = String(item.TSOBDESC || "");
+    const mucs = String(item["MU/CS"] || "");
+
+    for (const barcode of barcodes) {
 
       searchIndex.push({
-        data: {
-          ...item,
-          BARCODE: barcode
-        },
+        item,
+        barcode,
 
-        search: (
-          String(barcode || "") + " " +
-          String(item.ARTCEXR || "") + " " +
-          String(item.TSOBDESC || "") + " " +
-          String(item["MU/CS"] || "")
-        ).toLowerCase()
+        search:
+          (
+            barcode +
+            " " +
+            artcexr +
+            " " +
+            desc +
+            " " +
+            mucs
+          ).toLowerCase()
       });
 
-    });
-
-  });
+    }
+  }
 }
 
 /* ================= SEARCH ================= */
 function filterTable(keyword) {
+
   const k = keyword.trim().toLowerCase();
 
   if (!k) {
@@ -162,16 +172,29 @@ function filterTable(keyword) {
 
   if (!searchIndex.length) return;
 
-  const results = searchIndex
-    .filter(item => item.search.includes(k))
-    .slice(0, 200)
-    .map(item => item.data);
+  const results = [];
+
+  for (const row of searchIndex) {
+
+    if (row.search.includes(k)) {
+
+      results.push({
+        ...row.item,
+        BARCODE: row.barcode
+      });
+
+      if (results.length >= 200) {
+        break;
+      }
+    }
+  }
 
   renderTable(results);
 }
 
 /* ================= RENDER TABLE ================= */
 function renderTable(rows) {
+
   const table = document.getElementById("excelTable");
 
   if (!table) return;
@@ -186,29 +209,38 @@ function renderTable(rows) {
   // Giữ nguyên logic bỏ cột cuối
   const cols = allCols.slice(0, -1);
 
-  let html = "<thead><tr>";
+  const html = [];
 
-  cols.forEach((col) => {
-    html += `<th>${escapeHtml(col)}</th>`;
-  });
+  html.push("<thead><tr>");
 
-  html += "</tr></thead><tbody>";
+  for (const col of cols) {
+    html.push(
+      `<th>${escapeHtml(col)}</th>`
+    );
+  }
 
-  rows.forEach((row) => {
+  html.push("</tr></thead><tbody>");
 
-    html += "<tr>";
+  for (const row of rows) {
 
-    cols.forEach((col) => {
-      html += `<td>${escapeHtml(row[col] ?? "")}</td>`;
-    });
+    html.push("<tr>");
 
-    html += "</tr>";
+    for (const col of cols) {
 
-  });
+      html.push(
+        `<td>${escapeHtml(
+          row[col] ?? ""
+        )}</td>`
+      );
 
-  html += "</tbody>";
+    }
 
-  table.innerHTML = html;
+    html.push("</tr>");
+  }
+
+  html.push("</tbody>");
+
+  table.innerHTML = html.join("");
 }
 
 /* ================= ESCAPE HTML ================= */
@@ -230,10 +262,16 @@ function toggleMenu(e) {
 
   if (!menu || !overlay) return;
 
-  const isOpen = menu.style.display === "flex";
+  const isOpen =
+    menu.style.display === "flex";
 
-  menu.style.display = isOpen ? "none" : "flex";
-  overlay.style.display = isOpen ? "none" : "block";
+  menu.style.display = isOpen
+    ? "none"
+    : "flex";
+
+  overlay.style.display = isOpen
+    ? "none"
+    : "block";
 }
 
 function closeMenu() {
@@ -244,31 +282,52 @@ function closeMenu() {
   if (overlay) overlay.style.display = "none";
 }
 
-/* ================= SCANNER ================= */
+/* ================= QR SCANNER ================= */
 let html5QrCode = null;
 
 async function openScanner() {
-  const modal = document.getElementById("scannerModal");
+
+  const modal =
+    document.getElementById(
+      "scannerModal"
+    );
 
   if (modal) {
     modal.style.display = "flex";
   }
 
   try {
-    html5QrCode = new Html5Qrcode("reader");
+
+    html5QrCode =
+      new Html5Qrcode("reader");
 
     await html5QrCode.start(
-      { facingMode: "environment" },
+      {
+        facingMode: "environment"
+      },
       {
         fps: 10,
         qrbox: 250
       },
       async (decodedText) => {
 
-        const input = document.getElementById("searchInput");
+        const input =
+          document.getElementById(
+            "searchInput"
+          );
 
         if (input) {
           input.value = decodedText;
+        }
+
+        const clearBtn =
+          document.getElementById(
+            "clearBtn"
+          );
+
+        if (clearBtn) {
+          clearBtn.style.display =
+            "block";
         }
 
         filterTable(decodedText);
@@ -284,18 +343,27 @@ async function openScanner() {
 }
 
 async function closeScanner() {
-  const modal = document.getElementById("scannerModal");
+
+  const modal =
+    document.getElementById(
+      "scannerModal"
+    );
 
   if (modal) {
     modal.style.display = "none";
   }
 
   try {
+
     if (html5QrCode) {
+
       await html5QrCode.stop();
+
       await html5QrCode.clear();
+
       html5QrCode = null;
     }
+
   } catch (err) {
     console.error(err);
   }
