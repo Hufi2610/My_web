@@ -1,6 +1,7 @@
 let originalData = [];
 let searchIndex = [];
 let searchTimer = null;
+let lastKeyword = "";
 
 /* ================= LOADING UI ================= */
 function setLoading(isLoading) {
@@ -28,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       searchTimer = setTimeout(() => {
         filterTable(value);
-      }, 80);
+      }, 80); // giảm lag cảm giác gõ
 
       if (clearBtn) {
         clearBtn.style.display = value ? "block" : "none";
@@ -74,9 +75,7 @@ async function loadData() {
       files.map(async (file) => {
         try {
           const res = await fetch(file);
-
           if (!res.ok) return null;
-
           return res;
         } catch {
           return null;
@@ -87,7 +86,6 @@ async function loadData() {
     const jsons = await Promise.all(
       responses.map(async (res) => {
         if (!res) return [];
-
         try {
           return await res.json();
         } catch {
@@ -105,11 +103,11 @@ async function loadData() {
     buildIndex(originalData);
 
     console.log(
-      `Loaded ${originalData.length} products`
+      `Loaded: ${originalData.length} products`
     );
 
     console.log(
-      `Indexed ${searchIndex.length} barcodes`
+      `Indexed: ${searchIndex.length} barcodes`
     );
 
     setLoading(false);
@@ -122,7 +120,7 @@ async function loadData() {
   }
 }
 
-/* ================= BUILD SEARCH INDEX ================= */
+/* ================= BUILD INDEX ================= */
 function buildIndex(data) {
   searchIndex = [];
 
@@ -143,17 +141,12 @@ function buildIndex(data) {
       searchIndex.push({
         item,
         barcode,
-
-        search:
-          (
-            barcode +
-            " " +
-            artcexr +
-            " " +
-            desc +
-            " " +
-            mucs
-          ).toLowerCase()
+        search: (
+          barcode + " " +
+          artcexr + " " +
+          desc + " " +
+          mucs
+        ).toLowerCase()
       });
 
     }
@@ -165,6 +158,9 @@ function filterTable(keyword) {
 
   const k = keyword.trim().toLowerCase();
 
+  if (k === lastKeyword) return;
+  lastKeyword = k;
+
   if (!k) {
     renderTable([]);
     return;
@@ -173,19 +169,19 @@ function filterTable(keyword) {
   if (!searchIndex.length) return;
 
   const results = [];
+  let count = 0;
 
   for (const row of searchIndex) {
 
-    if (row.search.includes(k)) {
+    if (row.search.indexOf(k) !== -1) {
 
       results.push({
         ...row.item,
         BARCODE: row.barcode
       });
 
-      if (results.length >= 200) {
-        break;
-      }
+      count++;
+      if (count >= 200) break;
     }
   }
 
@@ -206,41 +202,30 @@ function renderTable(rows) {
 
   const allCols = Object.keys(rows[0]);
 
-  // Giữ nguyên logic bỏ cột cuối
   const cols = allCols.slice(0, -1);
 
-  const html = [];
-
-  html.push("<thead><tr>");
+  let html = "<thead><tr>";
 
   for (const col of cols) {
-    html.push(
-      `<th>${escapeHtml(col)}</th>`
-    );
+    html += `<th>${escapeHtml(col)}</th>`;
   }
 
-  html.push("</tr></thead><tbody>");
+  html += "</tr></thead><tbody>";
 
   for (const row of rows) {
 
-    html.push("<tr>");
+    html += "<tr>";
 
     for (const col of cols) {
-
-      html.push(
-        `<td>${escapeHtml(
-          row[col] ?? ""
-        )}</td>`
-      );
-
+      html += `<td>${escapeHtml(row[col] ?? "")}</td>`;
     }
 
-    html.push("</tr>");
+    html += "</tr>";
   }
 
-  html.push("</tbody>");
+  html += "</tbody>";
 
-  table.innerHTML = html.join("");
+  table.innerHTML = html;
 }
 
 /* ================= ESCAPE HTML ================= */
@@ -262,16 +247,10 @@ function toggleMenu(e) {
 
   if (!menu || !overlay) return;
 
-  const isOpen =
-    menu.style.display === "flex";
+  const isOpen = menu.style.display === "flex";
 
-  menu.style.display = isOpen
-    ? "none"
-    : "flex";
-
-  overlay.style.display = isOpen
-    ? "none"
-    : "block";
+  menu.style.display = isOpen ? "none" : "flex";
+  overlay.style.display = isOpen ? "none" : "block";
 }
 
 function closeMenu() {
@@ -282,53 +261,27 @@ function closeMenu() {
   if (overlay) overlay.style.display = "none";
 }
 
-/* ================= QR SCANNER ================= */
+/* ================= SCANNER ================= */
 let html5QrCode = null;
 
 async function openScanner() {
 
-  const modal =
-    document.getElementById(
-      "scannerModal"
-    );
+  const modal = document.getElementById("scannerModal");
 
-  if (modal) {
-    modal.style.display = "flex";
-  }
+  if (modal) modal.style.display = "flex";
 
   try {
 
-    html5QrCode =
-      new Html5Qrcode("reader");
+    html5QrCode = new Html5Qrcode("reader");
 
     await html5QrCode.start(
-      {
-        facingMode: "environment"
-      },
-      {
-        fps: 10,
-        qrbox: 250
-      },
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 250 },
       async (decodedText) => {
 
-        const input =
-          document.getElementById(
-            "searchInput"
-          );
+        const input = document.getElementById("searchInput");
 
-        if (input) {
-          input.value = decodedText;
-        }
-
-        const clearBtn =
-          document.getElementById(
-            "clearBtn"
-          );
-
-        if (clearBtn) {
-          clearBtn.style.display =
-            "block";
-        }
+        if (input) input.value = decodedText;
 
         filterTable(decodedText);
 
@@ -344,23 +297,15 @@ async function openScanner() {
 
 async function closeScanner() {
 
-  const modal =
-    document.getElementById(
-      "scannerModal"
-    );
+  const modal = document.getElementById("scannerModal");
 
-  if (modal) {
-    modal.style.display = "none";
-  }
+  if (modal) modal.style.display = "none";
 
   try {
 
     if (html5QrCode) {
-
       await html5QrCode.stop();
-
       await html5QrCode.clear();
-
       html5QrCode = null;
     }
 
