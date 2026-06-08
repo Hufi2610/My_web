@@ -28,7 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       searchTimer = setTimeout(() => {
         filterTable(value);
-      }, 250);
+      }, 80);
 
       if (clearBtn) {
         clearBtn.style.display = value ? "block" : "none";
