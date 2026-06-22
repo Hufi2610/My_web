@@ -154,7 +154,7 @@ function buildIndex(data) {
 }
 
 /* ================= SEARCH ================= */
-async function filterTable(keyword) {
+function filterTable(keyword) {
 
   const k = keyword.trim().toLowerCase();
 
@@ -166,26 +166,28 @@ async function filterTable(keyword) {
     return;
   }
 
-  clearTimeout(searchTimer);
+  if (!searchIndex.length) return;
 
-  searchTimer = setTimeout(async () => {
+  const results = [];
+  let count = 0;
 
-    try {
+  for (const row of searchIndex) {
 
-      const res = await fetch(
-        `https://script.google.com/macros/s/AKfycbyzCYZHhaKWkD-pgr6fyO_IlwMCDcDzXweaMe1M61Ks61DkMAiptziOqoukZMpr2gr7XA/exec?q=${encodeURIComponent(k)}`
-      );
+    if (row.search.indexOf(k) !== -1) {
 
-      const data = await res.json();
+      results.push({
+        ...row.item,
+        BARCODE: row.barcode
+      });
 
-      renderTable(data);
-
-    } catch (err) {
-      console.error(err);
+      count++;
+      if (count >= 200) break;
     }
+  }
 
-  }, 150);
+  renderTable(results);
 }
+
 /* ================= RENDER TABLE ================= */
 function renderTable(rows) {
 
