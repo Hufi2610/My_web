@@ -154,7 +154,7 @@ function buildIndex(data) {
 }
 
 /* ================= SEARCH ================= */
-function filterTable(keyword) {
+async function filterTable(keyword) {
 
   const k = keyword.trim().toLowerCase();
 
@@ -166,28 +166,26 @@ function filterTable(keyword) {
     return;
   }
 
-  if (!searchIndex.length) return;
+  clearTimeout(searchTimer);
 
-  const results = [];
-  let count = 0;
+  searchTimer = setTimeout(async () => {
 
-  for (const row of searchIndex) {
+    try {
 
-    if (row.search.indexOf(k) !== -1) {
+      const res = await fetch(
+        `https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec?q=${encodeURIComponent(k)}`
+      );
 
-      results.push({
-        ...row.item,
-        BARCODE: row.barcode
-      });
+      const data = await res.json();
 
-      count++;
-      if (count >= 200) break;
+      renderTable(data);
+
+    } catch (err) {
+      console.error(err);
     }
-  }
 
-  renderTable(results);
+  }, 150);
 }
-
 /* ================= RENDER TABLE ================= */
 function renderTable(rows) {
 
